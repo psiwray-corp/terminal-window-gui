@@ -1,0 +1,8 @@
+[File] Edit                             
+>  Open  Ctrl+O                         
+   Save  Ctrl+S                         
+ ───────────────                        
+ ▸ More       ▸                         
+                                        
+                                        
+                                        

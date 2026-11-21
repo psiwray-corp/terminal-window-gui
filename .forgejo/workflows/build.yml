@@ -1,0 +1,50 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: jdk25
+    steps:
+      # Forgejo's checkout/upload actions are Node 20 actions. The JDK image
+      # provides Java, not Node, so install the action runtime before `uses:`.
+      - name: Install checkout runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates curl git xz-utils
+          curl -fsSL https://nodejs.org/dist/v20.19.2/node-v20.19.2-linux-x64.tar.xz \
+            | tar -xJ --strip-components=1 -C /usr/local
+          node --version
+
+      - name: Checkout
+        uses: https://data.forgejo.org/actions/checkout@v4
+
+      - name: Install GL dependencies
+        shell: bash
+        run: |
+          if command -v apt-get >/dev/null 2>&1; then
+            bash ci/install-gl-deps.sh
+          else
+            echo "apt-get unavailable; install Xvfb, Mesa, and GLFW X11 libraries manually."
+          fi
+
+      - name: Build and verify
+        shell: bash
+        run: bash ci/build.sh
+
+      - name: Integration tests under Xvfb
+        shell: bash
+        run: bash ci/integration-test.sh
+
+      - name: Upload failure reports
+        if: failure()
+        uses: https://data.forgejo.org/forgejo/upload-artifact@v4
+        with:
+          name: build-reports
+          path: |
+            **/build/reports/**
+            **/build/test-results/**
+          retention-days: 7
+          if-no-files-found: ignore
